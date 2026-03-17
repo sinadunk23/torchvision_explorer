@@ -594,7 +594,7 @@ const TRANSFORMS = [
   {
     name:'RandomHorizontalFlip', tag:'geometric',
     params:[],
-    python:()=>`transforms.RandomHorizontalFlip(p=1.0)`,
+    python:()=>`transforms.RandomHorizontalFlip(p:float = 1.0)`,
     apply(ctx,src){
       const {width:w,height:h}=ctx.canvas;
       ctx.save(); ctx.translate(w,0); ctx.scale(-1,1);
@@ -604,7 +604,7 @@ const TRANSFORMS = [
   {
     name:'RandomVerticalFlip', tag:'geometric',
     params:[],
-    python:()=>`transforms.RandomVerticalFlip(p=1.0)`,
+    python:()=>`transforms.RandomVerticalFlip(p:float = 1.0)`,
     apply(ctx,src){
       const {width:w,height:h}=ctx.canvas;
       ctx.save(); ctx.translate(0,h); ctx.scale(1,-1);
@@ -616,7 +616,7 @@ const TRANSFORMS = [
     params:[
       {id:'angle',label:'degrees',min:-180,max:180,step:1,def:30,fmt:v=>`${v}°`}
     ],
-    python:({angle})=>`transforms.RandomRotation(degrees=${angle})`,
+    python:({angle})=>`transforms.RandomRotation(degrees:int = ${angle})`,
     apply(ctx,src,{angle}){
       const {width:w,height:h}=ctx.canvas;
       ctx.save(); ctx.translate(w/2,h/2); ctx.rotate(angle*Math.PI/180);
@@ -630,7 +630,7 @@ const TRANSFORMS = [
       {id:'scale',label:'scale',min:.5,max:2,step:.05,def:1.0,fmt:v=>v.toFixed(2)},
       {id:'shear',label:'shear°',min:-45,max:45,step:1,def:15,fmt:v=>`${v}°`}
     ],
-    python:({translate,scale,shear})=>`transforms.RandomAffine(\n    degrees=0,\n    translate=(${(translate/100).toFixed(2)}, ${(translate/100).toFixed(2)}),\n    scale=(${scale.toFixed(2)}, ${scale.toFixed(2)}),\n    shear=${shear}\n)`,
+    python:({translate,scale,shear})=>`transforms.RandomAffine(\n    degrees:int = 0,\n    translate:tuple[float, float] = (${(translate/100).toFixed(2)}, ${(translate/100).toFixed(2)}),\n    scale:tuple[float, float] = (${scale.toFixed(2)}, ${scale.toFixed(2)}),\n    shear:int = ${shear}\n)`,
     apply(ctx,src,{translate,scale,shear}){
       const {width:w,height:h}=ctx.canvas;
       const tx=(translate/100)*w*.5, ty=(translate/100)*h*.25;
@@ -646,7 +646,7 @@ const TRANSFORMS = [
     params:[
       {id:'size',label:'crop size %',min:20,max:100,step:1,def:70,fmt:v=>`${v}%`}
     ],
-    python:({size})=>`transforms.CenterCrop(size=${Math.round(size*4)})`,
+    python:({size})=>`transforms.CenterCrop(size:int = ${Math.round(size*4)})`,
     apply(ctx,src,{size}){
       const {width:w,height:h}=ctx.canvas;
       const sw=src.width, sh=src.height;
@@ -665,7 +665,7 @@ const TRANSFORMS = [
         {v:'30,100,220',l:'Blue'},{v:'0,180,100',l:'Green'}
       ],def:'0,0,0'}
     ],
-    python:({padding,fill})=>`transforms.Pad(padding=${padding}, fill=(${fill}))`,
+    python:({padding,fill})=>`transforms.Pad(\n    padding:int = ${padding},\n    fill:tuple[int, int, int] = (${fill})\n)`,
     apply(ctx,src,{padding,fill}){
       const {width:w,height:h}=ctx.canvas;
       const [r,g,b]=fill.split(',').map(Number);
@@ -681,7 +681,7 @@ const TRANSFORMS = [
       {id:'ratio',label:'aspect ratio',min:.3,max:3.3,step:.1,def:1.0,fmt:v=>v.toFixed(1)},
       {id:'value',label:'fill value',min:0,max:255,step:1,def:0,fmt:v=>v}
     ],
-    python:({scale,ratio,value})=>`transforms.RandomErasing(\n    p=1.0,\n    scale=(${scale.toFixed(2)}, ${scale.toFixed(2)}),\n    ratio=(${ratio.toFixed(1)}, ${ratio.toFixed(1)}),\n    value=${value}\n)`,
+    python:({scale,ratio,value})=>`transforms.RandomErasing(\n    p:float = 1.0,\n    scale:tuple[float, float] = (${scale.toFixed(2)}, ${scale.toFixed(2)}),\n    ratio:tuple[float, float] = (${ratio.toFixed(1)}, ${ratio.toFixed(1)}),\n    value:int = ${value}\n)`,
     apply(ctx,src,{scale,ratio,value}){
       const {width:w,height:h}=ctx.canvas;
       ctx.drawImage(src,0,0,w,h);
@@ -701,7 +701,7 @@ const TRANSFORMS = [
       {id:'saturation',label:'saturation',min:0,max:3,step:.05,def:1.0,fmt:v=>v.toFixed(2)},
       {id:'hue',label:'hue shift',min:-180,max:180,step:1,def:0,fmt:v=>`${v}°`}
     ],
-    python:({brightness,contrast,saturation,hue})=>`transforms.ColorJitter(\n    brightness=${brightness.toFixed(2)},\n    contrast=${contrast.toFixed(2)},\n    saturation=${saturation.toFixed(2)},\n    hue=${(hue/360).toFixed(3)}\n)`,
+    python:({brightness,contrast,saturation,hue})=>`transforms.ColorJitter(\n    brightness:float = ${brightness.toFixed(2)},\n    contrast:float = ${contrast.toFixed(2)},\n    saturation:float = ${saturation.toFixed(2)},\n    hue:float = ${(hue/360).toFixed(3)}\n)`,
     apply(ctx,src,{brightness,contrast,saturation,hue}){
       ctx.filter=`brightness(${brightness}) contrast(${contrast}) saturate(${saturation}) hue-rotate(${hue}deg)`;
       ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
@@ -713,7 +713,7 @@ const TRANSFORMS = [
     params:[
       {id:'amount',label:'amount',min:0,max:1,step:.01,def:1.0,fmt:v=>`${(v*100).toFixed(0)}%`}
     ],
-    python:()=>`transforms.Grayscale(num_output_channels=1)`,
+    python:()=>`transforms.Grayscale(num_output_channels:int = 1)`,
     apply(ctx,src,{amount}){
       ctx.filter=`grayscale(${amount})`;
       ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
@@ -725,7 +725,7 @@ const TRANSFORMS = [
     params:[
       {id:'threshold',label:'threshold',min:0,max:255,step:1,def:128,fmt:v=>v}
     ],
-    python:({threshold})=>`transforms.Solarize(threshold=${threshold})`,
+    python:({threshold})=>`transforms.Solarize(threshold:int = ${threshold})`,
     apply(ctx,src,{threshold}){
       const {width:w,height:h}=ctx.canvas;
       ctx.drawImage(src,0,0,w,h);
@@ -740,7 +740,7 @@ const TRANSFORMS = [
     params:[
       {id:'bits',label:'bits',min:1,max:8,step:1,def:4,fmt:v=>`${v}-bit`}
     ],
-    python:({bits})=>`transforms.Posterize(bits=${bits})`,
+    python:({bits})=>`transforms.Posterize(bits:int = ${bits})`,
     apply(ctx,src,{bits}){
       const {width:w,height:h}=ctx.canvas;
       ctx.drawImage(src,0,0,w,h);
@@ -756,7 +756,7 @@ const TRANSFORMS = [
     params:[
       {id:'amount',label:'amount',min:0,max:1,step:.01,def:1.0,fmt:v=>`${(v*100).toFixed(0)}%`}
     ],
-    python:()=>`transforms.RandomInvert(p=1.0)`,
+    python:()=>`transforms.RandomInvert(p:float = 1.0)`,
     apply(ctx,src,{amount}){
       ctx.filter=`invert(${amount})`;
       ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
@@ -769,7 +769,7 @@ const TRANSFORMS = [
     params:[
       {id:'sigma',label:'sigma',min:0,max:22,step:.2,def:2.5,fmt:v=>v.toFixed(1)}
     ],
-    python:({sigma})=>`transforms.GaussianBlur(\n    kernel_size=5,\n    sigma=${sigma.toFixed(1)}\n)`,
+    python:({sigma})=>`transforms.GaussianBlur(\n    kernel_size:int = 5,\n    sigma:float = ${sigma.toFixed(1)}\n)`,
     apply(ctx,src,{sigma}){
       ctx.filter=`blur(${sigma}px)`;
       ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
@@ -781,7 +781,7 @@ const TRANSFORMS = [
     params:[
       {id:'factor',label:'sharpness factor',min:0,max:8,step:.1,def:2.0,fmt:v=>v.toFixed(1)}
     ],
-    python:({factor})=>`transforms.RandomAdjustSharpness(\n    sharpness_factor=${factor.toFixed(1)},\n    p=1.0\n)`,
+    python:({factor})=>`transforms.RandomAdjustSharpness(\n    sharpness_factor:float = ${factor.toFixed(1)},\n    p:float = 1.0\n)`,
     apply(ctx,src,{factor}){
       const {width:w,height:h}=ctx.canvas;
       if(factor<=1){
@@ -813,7 +813,7 @@ const TRANSFORMS = [
   {
     name:'AutoContrast', tag:'normalize',
     params:[],
-    python:()=>`transforms.autocontrast(img)  # functional`,
+    python:()=>`transforms.functional.autocontrast(\n    img:Tensor  # no parameters\n)`,
     apply(ctx,src){
       const {width:w,height:h}=ctx.canvas;
       ctx.drawImage(src,0,0,w,h);
@@ -830,7 +830,7 @@ const TRANSFORMS = [
   {
     name:'Equalize', tag:'normalize',
     params:[],
-    python:()=>`transforms.RandomEqualize(p=1.0)`,
+    python:()=>`transforms.RandomEqualize(p:float = 1.0)`,
     apply(ctx,src){
       const {width:w,height:h}=ctx.canvas;
       ctx.drawImage(src,0,0,w,h);
@@ -854,7 +854,7 @@ const TRANSFORMS = [
       {id:'mean',label:'mean (per channel)',min:0,max:1,step:.01,def:.5,fmt:v=>v.toFixed(2)},
       {id:'std',label:'std (per channel)',min:.05,max:2,step:.05,def:.5,fmt:v=>v.toFixed(2)}
     ],
-    python:({mean,std})=>`transforms.Normalize(\n    mean=[${mean.toFixed(3)}, ${mean.toFixed(3)}, ${mean.toFixed(3)}],\n    std=[${std.toFixed(3)}, ${std.toFixed(3)}, ${std.toFixed(3)}]\n)`,
+    python:({mean,std})=>`transforms.Normalize(\n    mean:list[float] = [${mean.toFixed(3)}, ${mean.toFixed(3)}, ${mean.toFixed(3)}],\n    std:list[float] = [${std.toFixed(3)}, ${std.toFixed(3)}, ${std.toFixed(3)}]\n)`,
     apply(ctx,src,{mean,std}){
       const {width:w,height:h}=ctx.canvas;
       ctx.drawImage(src,0,0,w,h);
@@ -1030,7 +1030,7 @@ function buildCard(t, idx) {
 }
 
 function getRawSnippet(t, pvals) {
-  return `import torchvision.transforms as transforms\n\ntransform = ${t.python(pvals)}`;
+  return t.python(pvals);
 }
 
 function updateSnippet(el, t, pvals) {
