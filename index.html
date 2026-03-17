@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>torchvision · Transform Explorer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,600;0,700;1,400&family=Barlow:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b10;
+  --surface:#0f131b;
+  --card:#111620;
+  --card-hover:#161d2c;
+  --border:#1e2840;
+  --border-bright:#2a3a5c;
+  --accent:#00e5b0;
+  --accent-dim:rgba(0,229,176,.1);
+  --accent-mid:rgba(0,229,176,.25);
+  --amber:#f5a623;
+  --amber-dim:rgba(245,166,35,.1);
+  --blue:#4a8fff;
+  --blue-dim:rgba(74,143,255,.1);
+  --red:#ff4d6a;
+  --text:#c8d4e8;
+  --text-muted:#4a5a78;
+  --text-dim:#2e3d5a;
+  --bright:#eef2ff;
+  --mono:'JetBrains Mono',monospace;
+  --sans:'Barlow',sans-serif;
+}
+
+html{scroll-behavior:smooth}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--sans);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+/* ─── GRID BG ─── */
+body::before{
+  content:'';
+  position:fixed;inset:0;
+  background-image:
+    linear-gradient(var(--border) 1px,transparent 1px),
+    linear-gradient(90deg,var(--border) 1px,transparent 1px);
+  background-size:40px 40px;
+  opacity:.18;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* ─── HEADER ─── */
+.header{
+  position:relative;z-index:10;
+  padding:22px 36px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(0,229,176,.03) 0%,transparent 100%);
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;
+}
+.logo{display:flex;align-items:center;gap:14px}
+.logo-badge{
+  font-family:var(--mono);font-size:11px;font-weight:700;
+  letter-spacing:.08em;text-transform:uppercase;
+  background:var(--accent-dim);border:1px solid var(--accent-mid);
+  color:var(--accent);padding:4px 10px;border-radius:4px;
+}
+.logo-title{
+  font-family:var(--sans);font-size:20px;font-weight:800;
+  color:var(--bright);letter-spacing:-.02em;
+}
+.logo-title span{color:var(--accent)}
+.logo-ver{
+  font-family:var(--mono);font-size:10px;color:var(--text-muted);
+  background:var(--surface);border:1px solid var(--border);
+  padding:2px 7px;border-radius:3px;
+}
+.header-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+
+.upload-label{
+  display:flex;align-items:center;gap:7px;
+  background:var(--surface);border:1px solid var(--border-bright);
+  color:var(--text);padding:7px 14px;border-radius:6px;
+  cursor:pointer;font-family:var(--mono);font-size:11px;font-weight:600;
+  letter-spacing:.05em;transition:all .18s;user-select:none;
+}
+.upload-label:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.upload-label svg{width:13px;height:13px;flex-shrink:0}
+#imgUpload{display:none}
+
+.hint-badge{
+  font-family:var(--mono);font-size:10px;color:var(--text-muted);
+  background:var(--surface);border:1px solid var(--border);
+  padding:4px 10px;border-radius:4px;letter-spacing:.04em;
+}
+.hint-badge span{color:var(--amber)}
+
+/* ─── SOURCE BAR ─── */
+.source-bar{
+  position:relative;z-index:10;
+  padding:14px 36px;
+  border-bottom:1px solid var(--border);
+  background:var(--surface);
+  display:flex;align-items:center;gap:20px;flex-wrap:wrap;
+}
+.source-thumb{
+  width:68px;height:68px;border-radius:6px;overflow:hidden;
+  border:1px solid var(--border-bright);flex-shrink:0;background:#000;
+}
+#srcPreview{width:100%;height:100%;display:block}
+.source-meta{display:flex;flex-direction:column;gap:5px}
+.source-label{font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase}
+.source-dims{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--bright)}
+.source-note{font-size:12px;color:var(--text-muted);font-weight:300}
+
+/* ─── FILTER BAR ─── */
+.filter-bar{
+  position:relative;z-index:10;
+  padding:12px 36px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.filter-prefix{
+  font-family:var(--mono);font-size:10px;color:var(--text-muted);
+  letter-spacing:.1em;text-transform:uppercase;margin-right:4px;flex-shrink:0;
+}
+.chip{
+  font-family:var(--mono);font-size:10px;font-weight:600;
+  padding:4px 11px;border-radius:20px;
+  border:1px solid var(--border);background:transparent;
+  color:var(--text-muted);cursor:pointer;transition:all .14s;
+  letter-spacing:.06em;text-transform:uppercase;
+}
+.chip:hover{border-color:var(--border-bright);color:var(--text)}
+.chip.active{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+
+/* ─── COUNT ─── */
+.transform-count{
+  font-family:var(--mono);font-size:10px;color:var(--text-muted);
+  letter-spacing:.06em;margin-left:auto;
+}
+.transform-count span{color:var(--accent);font-weight:700}
+
+/* ─── GRID ─── */
+.grid-wrapper{
+  position:relative;z-index:5;
+  padding:28px 36px 80px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(268px,1fr));
+  gap:18px;
+}
+
+/* ─── CARD ─── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:10px;overflow:hidden;
+  display:flex;flex-direction:column;
+  transition:border-color .2s,transform .2s,box-shadow .2s;
+  animation:fadeUp .35s ease both;
+}
+.card:hover{
+  border-color:var(--border-bright);
+  transform:translateY(-3px);
+  box-shadow:0 12px 40px rgba(0,0,0,.4);
+}
+@keyframes fadeUp{
+  from{opacity:0;transform:translateY(16px)}
+  to{opacity:1;transform:translateY(0)}
+}
+
+/* ─── CARD HEADER ─── */
+.card-top{
+  padding:10px 12px;
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.t-name{
+  font-family:var(--mono);font-size:12px;font-weight:700;
+  color:var(--bright);letter-spacing:.01em;cursor:pointer;
+  display:flex;align-items:center;gap:6px;
+}
+.t-name:hover{color:var(--accent)}
+.t-tag{
+  font-family:var(--mono);font-size:9px;font-weight:600;
+  padding:2px 7px;border-radius:3px;letter-spacing:.06em;text-transform:uppercase;
+  flex-shrink:0;
+}
+.tag-geometric{background:rgba(74,143,255,.12);color:#4a8fff;border:1px solid rgba(74,143,255,.25)}
+.tag-color{background:rgba(245,166,35,.12);color:#f5a623;border:1px solid rgba(245,166,35,.25)}
+.tag-blur{background:rgba(160,100,255,.12);color:#a064ff;border:1px solid rgba(160,100,255,.25)}
+.tag-crop{background:rgba(255,77,106,.12);color:#ff4d6a;border:1px solid rgba(255,77,106,.25)}
+.tag-normalize{background:rgba(0,229,176,.12);color:#00e5b0;border:1px solid rgba(0,229,176,.25)}
+
+/* ─── CANVAS AREA ─── */
+.canvas-area{
+  position:relative;
+  width:100%;aspect-ratio:1/1;
+  background:#05070b;overflow:hidden;
+  cursor:crosshair;
+}
+.t-canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+.compare-hint{
+  position:absolute;bottom:7px;right:7px;
+  font-family:var(--mono);font-size:9px;color:rgba(255,255,255,.35);
+  letter-spacing:.05em;pointer-events:none;transition:opacity .2s;
+}
+.card:hover .compare-hint{opacity:1}
+
+/* Original overlay */
+.original-badge{
+  position:absolute;top:7px;left:7px;
+  font-family:var(--mono);font-size:9px;font-weight:700;
+  background:rgba(0,0,0,.7);color:var(--amber);
+  padding:2px 6px;border-radius:3px;letter-spacing:.08em;
+  opacity:0;pointer-events:none;transition:opacity .1s;
+}
+
+/* ─── CONTROLS ─── */
+.card-controls{
+  padding:10px 12px;
+  display:flex;flex-direction:column;gap:9px;
+  border-top:1px solid var(--border);
+  background:rgba(0,0,0,.12);
+}
+.ctrl-row{display:flex;flex-direction:column;gap:4px}
+.ctrl-labels{display:flex;justify-content:space-between;align-items:baseline}
+.ctrl-name{font-family:var(--mono);font-size:9px;color:var(--text-muted);letter-spacing:.08em;text-transform:uppercase}
+.ctrl-val{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--accent)}
+
+input[type=range]{
+  -webkit-appearance:none;appearance:none;
+  width:100%;height:2px;border-radius:1px;
+  background:var(--border-bright);outline:none;cursor:pointer;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none;appearance:none;
+  width:11px;height:11px;border-radius:50%;
+  background:var(--accent);cursor:pointer;
+  box-shadow:0 0 8px rgba(0,229,176,.5);
+  transition:transform .1s,box-shadow .1s;
+}
+input[type=range]::-webkit-slider-thumb:hover{
+  transform:scale(1.4);
+  box-shadow:0 0 14px rgba(0,229,176,.7);
+}
+input[type=range]:focus{outline:none}
+
+select{
+  width:100%;background:var(--surface);
+  border:1px solid var(--border-bright);color:var(--text);
+  padding:5px 8px;border-radius:4px;
+  font-family:var(--mono);font-size:10px;cursor:pointer;outline:none;
+}
+select:focus{border-color:var(--accent)}
+
+.no-ctrl{font-family:var(--mono);font-size:10px;color:var(--text-dim);font-style:italic;letter-spacing:.04em;padding:2px 0}
+
+/* ─── CARD FOOTER ─── */
+.card-footer{
+  padding:7px 12px;
+  border-top:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  background:rgba(0,0,0,.2);
+}
+.copy-btn{
+  display:flex;align-items:center;gap:5px;
+  font-family:var(--mono);font-size:9px;font-weight:600;
+  color:var(--text-muted);background:transparent;
+  border:1px solid var(--border);border-radius:3px;
+  padding:3px 8px;cursor:pointer;transition:all .15s;letter-spacing:.06em;
+}
+.copy-btn:hover{border-color:var(--amber);color:var(--amber);background:var(--amber-dim)}
+.copy-btn.copied{border-color:var(--accent);color:var(--accent);background:var(--accent-dim)}
+.copy-btn svg{width:10px;height:10px}
+
+/* ─── PYTHON SNIPPET TOOLTIP ─── */
+.snippet-wrap{position:relative}
+.snippet-popup{
+  display:none;
+  position:absolute;bottom:calc(100% + 8px);left:0;right:0;
+  background:var(--surface);border:1px solid var(--border-bright);
+  border-radius:6px;padding:10px 12px;z-index:100;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
+}
+.snippet-popup.open{display:block}
+.snippet-code{
+  font-family:var(--mono);font-size:10px;line-height:1.7;
+  color:#a8c8ff;white-space:pre;overflow-x:auto;
+}
+.snippet-code .kw{color:#f78c6c}
+.snippet-code .fn{color:var(--accent)}
+.snippet-code .num{color:#f5a623}
+.snippet-code .str{color:#c3e88d}
+
+/* ─── FOOTER ─── */
+.page-footer{
+  position:relative;z-index:10;
+  border-top:1px solid var(--border);
+  padding:16px 36px;
+  display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+  background:var(--surface);
+}
+.footer-note{font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.04em}
+.footer-note a{color:var(--accent);text-decoration:none}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:680px){
+  .header,.source-bar,.filter-bar,.grid-wrapper,.page-footer{padding-left:16px;padding-right:16px}
+  .logo-title{font-size:16px}
+}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <span class="logo-badge">torchvision</span>
+    <span class="logo-title">Transform <span>Explorer</span></span>
+    <span class="logo-ver">v2.7</span>
+  </div>
+  <div class="header-right">
+    <span class="hint-badge">Hold <span>SPACE</span> on image = compare original</span>
+    <label class="upload-label" for="imgUpload">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      Upload Image
+    </label>
+    <input type="file" id="imgUpload" accept="image/*">
+  </div>
+</header>
+
+<!-- SOURCE BAR -->
+<div class="source-bar">
+  <div class="source-thumb">
+    <canvas id="srcPreview" width="68" height="68"></canvas>
+  </div>
+  <div class="source-meta">
+    <span class="source-label">Source Image</span>
+    <span class="source-dims" id="srcDims">400 × 400</span>
+    <span class="source-note">Applied as input to all transforms below</span>
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar">
+  <span class="filter-prefix">Filter:</span>
+  <button class="chip active" data-tag="all">All</button>
+  <button class="chip" data-tag="geometric">Geometric</button>
+  <button class="chip" data-tag="color">Color</button>
+  <button class="chip" data-tag="blur">Blur &amp; Sharpen</button>
+  <button class="chip" data-tag="crop">Crop &amp; Erase</button>
+  <button class="chip" data-tag="normalize">Normalize</button>
+  <span class="transform-count"><span id="visibleCount">17</span> transforms</span>
+</div>
+
+<!-- GRID -->
+<div class="grid-wrapper">
+  <div class="grid" id="transformGrid"></div>
+</div>
+
+<!-- FOOTER -->
+<footer class="page-footer">
+  <span class="footer-note">torchvision Transform Explorer · Canvas-based JS simulation</span>
+  <span class="footer-note"><a href="https://pytorch.org/vision/stable/transforms.html" target="_blank">torchvision docs ↗</a></span>
+</footer>
+
+<script>
+// ============================================================
+// SOURCE IMAGE — drawn programmatically (no CORS issues)
+// ============================================================
+const SRC_SIZE = 400;
+let srcCanvas = document.createElement('canvas');
+srcCanvas.width = SRC_SIZE; srcCanvas.height = SRC_SIZE;
+
+function drawScene(canvas) {
+  const ctx = canvas.getContext('2d');
+  const s = SRC_SIZE;
+
+  // Sky
+  const sky = ctx.createLinearGradient(0,0,0,s*.58);
+  sky.addColorStop(0,'#071a50'); sky.addColorStop(1,'#1a6dbf');
+  ctx.fillStyle=sky; ctx.fillRect(0,0,s,s*.6);
+
+  // Ground
+  const gnd = ctx.createLinearGradient(0,s*.56,0,s);
+  gnd.addColorStop(0,'#2e7d1e'); gnd.addColorStop(.5,'#1f5c14'); gnd.addColorStop(1,'#123a0c');
+  ctx.fillStyle=gnd; ctx.fillRect(0,s*.56,s,s*.44);
+
+  // Sun glow
+  const sg=ctx.createRadialGradient(s*.8,s*.16,s*.02,s*.8,s*.16,s*.2);
+  sg.addColorStop(0,'rgba(255,245,100,.45)'); sg.addColorStop(1,'rgba(255,200,0,0)');
+  ctx.fillStyle=sg; ctx.beginPath(); ctx.arc(s*.8,s*.16,s*.2,0,Math.PI*2); ctx.fill();
+  // Sun
+  ctx.fillStyle='#ffe840'; ctx.beginPath(); ctx.arc(s*.8,s*.16,s*.072,0,Math.PI*2); ctx.fill();
+
+  // Mountain left
+  ctx.fillStyle='#3a4a68';
+  ctx.beginPath(); ctx.moveTo(-10,s*.58); ctx.lineTo(s*.26,s*.2); ctx.lineTo(s*.52,s*.58); ctx.closePath(); ctx.fill();
+  // Mountain right
+  ctx.fillStyle='#4d5e7c';
+  ctx.beginPath(); ctx.moveTo(s*.28,s*.58); ctx.lineTo(s*.56,s*.18); ctx.lineTo(s*.84,s*.58); ctx.closePath(); ctx.fill();
+  // Snow
+  ctx.fillStyle='#ddeef8';
+  ctx.beginPath(); ctx.moveTo(s*.56,s*.18); ctx.lineTo(s*.49,s*.34); ctx.lineTo(s*.63,s*.34); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(s*.26,s*.2); ctx.lineTo(s*.2,s*.34); ctx.lineTo(s*.32,s*.34); ctx.closePath(); ctx.fill();
+
+  // Tree
+  ctx.fillStyle='#5a3020'; ctx.fillRect(s*.075,s*.52,s*.038,s*.22);
+  const greens=['#1a6018','#1e7020','#22802a'];
+  for(let i=0;i<3;i++){
+    ctx.fillStyle=greens[i%greens.length];
+    ctx.beginPath();
+    ctx.moveTo(s*.094,s*(.26+i*.08)); ctx.lineTo(s*.03,s*(.46+i*.08)); ctx.lineTo(s*.158,s*(.46+i*.08));
+    ctx.closePath(); ctx.fill();
+  }
+
+  // House body
+  ctx.fillStyle='#d4a26a'; ctx.fillRect(s*.58,s*.5,s*.24,s*.26);
+  // Roof
+  ctx.fillStyle='#9c2e2e';
+  ctx.beginPath(); ctx.moveTo(s*.565,s*.5); ctx.lineTo(s*.7,s*.33); ctx.lineTo(s*.835,s*.5); ctx.closePath(); ctx.fill();
+  // Door
+  ctx.fillStyle='#6a3820'; ctx.fillRect(s*.662,s*.62,s*.058,s*.14);
+  // Windows
+  const wc='#b0dff8';
+  ctx.fillStyle=wc; ctx.fillRect(s*.598,s*.555,s*.058,s*.058);
+  ctx.fillStyle=wc; ctx.fillRect(s*.746,s*.555,s*.058,s*.058);
+  ctx.strokeStyle='#6898b8'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(s*.627,s*.555); ctx.lineTo(s*.627,s*.613);
+  ctx.moveTo(s*.598,s*.584); ctx.lineTo(s*.656,s*.584);
+  ctx.moveTo(s*.775,s*.555); ctx.lineTo(s*.775,s*.613);
+  ctx.moveTo(s*.746,s*.584); ctx.lineTo(s*.804,s*.584);
+  ctx.stroke();
+  // Path
+  ctx.fillStyle='#c8a050';
+  ctx.beginPath(); ctx.moveTo(s*.678,s*.76); ctx.lineTo(s*.645,s*1.02); ctx.lineTo(s*.755,s*1.02); ctx.lineTo(s*.722,s*.76); ctx.closePath(); ctx.fill();
+
+  // Clouds
+  function cloud(cx,cy,r){
+    ctx.fillStyle='rgba(255,255,255,.86)';
+    ctx.beginPath();
+    ctx.arc(cx,cy,r,0,Math.PI*2);
+    ctx.arc(cx+r*.9,cy-r*.2,r*.7,0,Math.PI*2);
+    ctx.arc(cx+r*1.65,cy,r*.55,0,Math.PI*2);
+    ctx.arc(cx+r*.75,cy+r*.3,r*.5,0,Math.PI*2);
+    ctx.fill();
+  }
+  cloud(s*.12,s*.1,s*.048); cloud(s*.38,s*.08,s*.04);
+
+  // Flowers
+  const fc=['#ff4477','#ff8800','#ffdd00','#ff44aa','#44ddff'];
+  for(let i=0;i<5;i++){
+    const fx=s*(.04+i*.19), fy=s*.72;
+    ctx.fillStyle='#2a8a15'; ctx.fillRect(fx+1,fy,2,s*.09);
+    ctx.fillStyle=fc[i]; ctx.beginPath(); ctx.arc(fx+2,fy,s*.018,0,Math.PI*2); ctx.fill();
+  }
+
+  // Birds
+  ctx.strokeStyle='rgba(255,255,255,.6)'; ctx.lineWidth=1.5;
+  [[s*.35,s*.12],[s*.4,s*.1],[s*.45,s*.13]].forEach(([bx,by])=>{
+    ctx.beginPath(); ctx.moveTo(bx,by); ctx.quadraticCurveTo(bx+6,by-5,bx+12,by); ctx.stroke();
+  });
+}
+
+drawScene(srcCanvas);
+
+// Show preview
+const prevCtx = document.getElementById('srcPreview').getContext('2d');
+prevCtx.drawImage(srcCanvas,0,0,68,68);
+
+// Upload handler
+document.getElementById('imgUpload').addEventListener('change',function(e){
+  const f=e.target.files[0]; if(!f) return;
+  const img=new Image();
+  img.onload=function(){
+    const ctx=srcCanvas.getContext('2d');
+    const sc=Math.min(SRC_SIZE/img.width,SRC_SIZE/img.height);
+    const w=img.width*sc, h=img.height*sc;
+    ctx.fillStyle='#05070b'; ctx.fillRect(0,0,SRC_SIZE,SRC_SIZE);
+    ctx.drawImage(img,(SRC_SIZE-w)/2,(SRC_SIZE-h)/2,w,h);
+    prevCtx.clearRect(0,0,68,68); prevCtx.drawImage(srcCanvas,0,0,68,68);
+    document.getElementById('srcDims').textContent=`${img.naturalWidth} × ${img.naturalHeight}`;
+    registry.forEach(r=>renderT(r.canvas,r.transform,r.params));
+  };
+  img.src=URL.createObjectURL(f);
+});
+
+// ============================================================
+// TRANSFORM DEFINITIONS
+// ============================================================
+const TRANSFORMS = [
+  // GEOMETRIC
+  {
+    name:'RandomHorizontalFlip', tag:'geometric',
+    params:[],
+    python:()=>`transforms.RandomHorizontalFlip(p=1.0)`,
+    apply(ctx,src){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.save(); ctx.translate(w,0); ctx.scale(-1,1);
+      ctx.drawImage(src,0,0,w,h); ctx.restore();
+    }
+  },
+  {
+    name:'RandomVerticalFlip', tag:'geometric',
+    params:[],
+    python:()=>`transforms.RandomVerticalFlip(p=1.0)`,
+    apply(ctx,src){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.save(); ctx.translate(0,h); ctx.scale(1,-1);
+      ctx.drawImage(src,0,0,w,h); ctx.restore();
+    }
+  },
+  {
+    name:'RandomRotation', tag:'geometric',
+    params:[
+      {id:'angle',label:'degrees',min:-180,max:180,step:1,def:30,fmt:v=>`${v}°`}
+    ],
+    python:({angle})=>`transforms.RandomRotation(degrees=${angle})`,
+    apply(ctx,src,{angle}){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.save(); ctx.translate(w/2,h/2); ctx.rotate(angle*Math.PI/180);
+      ctx.drawImage(src,-w/2,-h/2,w,h); ctx.restore();
+    }
+  },
+  {
+    name:'RandomAffine', tag:'geometric',
+    params:[
+      {id:'translate',label:'translate %',min:0,max:40,step:1,def:15,fmt:v=>`${v}%`},
+      {id:'scale',label:'scale',min:.5,max:2,step:.05,def:1.0,fmt:v=>v.toFixed(2)},
+      {id:'shear',label:'shear°',min:-45,max:45,step:1,def:15,fmt:v=>`${v}°`}
+    ],
+    python:({translate,scale,shear})=>`transforms.RandomAffine(\n    degrees=0,\n    translate=(${(translate/100).toFixed(2)}, ${(translate/100).toFixed(2)}),\n    scale=(${scale.toFixed(2)}, ${scale.toFixed(2)}),\n    shear=${shear}\n)`,
+    apply(ctx,src,{translate,scale,shear}){
+      const {width:w,height:h}=ctx.canvas;
+      const tx=(translate/100)*w*.5, ty=(translate/100)*h*.25;
+      const sr=shear*Math.PI/180;
+      ctx.save(); ctx.translate(w/2,h/2);
+      ctx.transform(scale,0,Math.tan(sr)*scale,scale,tx,ty);
+      ctx.drawImage(src,-w/2,-h/2,w,h); ctx.restore();
+    }
+  },
+  // CROP & ERASE
+  {
+    name:'CenterCrop', tag:'crop',
+    params:[
+      {id:'size',label:'crop size %',min:20,max:100,step:1,def:70,fmt:v=>`${v}%`}
+    ],
+    python:({size})=>`transforms.CenterCrop(size=${Math.round(size*4)})`,
+    apply(ctx,src,{size}){
+      const {width:w,height:h}=ctx.canvas;
+      const sw=src.width, sh=src.height;
+      const cw=sw*(size/100), ch=sh*(size/100);
+      const sx=(sw-cw)/2, sy=(sh-ch)/2;
+      ctx.drawImage(src,sx,sy,cw,ch,0,0,w,h);
+    }
+  },
+  {
+    name:'Pad', tag:'crop',
+    params:[
+      {id:'padding',label:'padding px',min:0,max:70,step:2,def:24,fmt:v=>`${v}px`},
+      {id:'fill',label:'fill',type:'select',options:[
+        {v:'0,0,0',l:'Black'},{v:'255,255,255',l:'White'},
+        {v:'127,127,127',l:'Gray'},{v:'220,40,40',l:'Red'},
+        {v:'30,100,220',l:'Blue'},{v:'0,180,100',l:'Green'}
+      ],def:'0,0,0'}
+    ],
+    python:({padding,fill})=>`transforms.Pad(padding=${padding}, fill=(${fill}))`,
+    apply(ctx,src,{padding,fill}){
+      const {width:w,height:h}=ctx.canvas;
+      const [r,g,b]=fill.split(',').map(Number);
+      ctx.fillStyle=`rgb(${r},${g},${b})`; ctx.fillRect(0,0,w,h);
+      const iw=w-padding*2, ih=h-padding*2;
+      if(iw>0&&ih>0) ctx.drawImage(src,padding,padding,iw,ih);
+    }
+  },
+  {
+    name:'RandomErasing', tag:'crop',
+    params:[
+      {id:'scale',label:'erase scale',min:.02,max:.7,step:.01,def:.2,fmt:v=>`${(v*100).toFixed(0)}%`},
+      {id:'ratio',label:'aspect ratio',min:.3,max:3.3,step:.1,def:1.0,fmt:v=>v.toFixed(1)},
+      {id:'value',label:'fill value',min:0,max:255,step:1,def:0,fmt:v=>v}
+    ],
+    python:({scale,ratio,value})=>`transforms.RandomErasing(\n    p=1.0,\n    scale=(${scale.toFixed(2)}, ${scale.toFixed(2)}),\n    ratio=(${ratio.toFixed(1)}, ${ratio.toFixed(1)}),\n    value=${value}\n)`,
+    apply(ctx,src,{scale,ratio,value}){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.drawImage(src,0,0,w,h);
+      const area=w*h*scale;
+      const rw=Math.sqrt(area*ratio), rh=Math.sqrt(area/ratio);
+      const ex=(w-rw)/2, ey=(h-rh)/2;
+      ctx.fillStyle=`rgb(${value},${value},${value})`;
+      ctx.fillRect(Math.max(0,ex),Math.max(0,ey),Math.min(rw,w),Math.min(rh,h));
+    }
+  },
+  // COLOR
+  {
+    name:'ColorJitter', tag:'color',
+    params:[
+      {id:'brightness',label:'brightness',min:0,max:3,step:.05,def:1.0,fmt:v=>v.toFixed(2)},
+      {id:'contrast',label:'contrast',min:0,max:3,step:.05,def:1.0,fmt:v=>v.toFixed(2)},
+      {id:'saturation',label:'saturation',min:0,max:3,step:.05,def:1.0,fmt:v=>v.toFixed(2)},
+      {id:'hue',label:'hue shift',min:-180,max:180,step:1,def:0,fmt:v=>`${v}°`}
+    ],
+    python:({brightness,contrast,saturation,hue})=>`transforms.ColorJitter(\n    brightness=${brightness.toFixed(2)},\n    contrast=${contrast.toFixed(2)},\n    saturation=${saturation.toFixed(2)},\n    hue=${(hue/360).toFixed(3)}\n)`,
+    apply(ctx,src,{brightness,contrast,saturation,hue}){
+      ctx.filter=`brightness(${brightness}) contrast(${contrast}) saturate(${saturation}) hue-rotate(${hue}deg)`;
+      ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
+      ctx.filter='none';
+    }
+  },
+  {
+    name:'Grayscale', tag:'color',
+    params:[
+      {id:'amount',label:'amount',min:0,max:1,step:.01,def:1.0,fmt:v=>`${(v*100).toFixed(0)}%`}
+    ],
+    python:()=>`transforms.Grayscale(num_output_channels=1)`,
+    apply(ctx,src,{amount}){
+      ctx.filter=`grayscale(${amount})`;
+      ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
+      ctx.filter='none';
+    }
+  },
+  {
+    name:'Solarize', tag:'color',
+    params:[
+      {id:'threshold',label:'threshold',min:0,max:255,step:1,def:128,fmt:v=>v}
+    ],
+    python:({threshold})=>`transforms.Solarize(threshold=${threshold})`,
+    apply(ctx,src,{threshold}){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.drawImage(src,0,0,w,h);
+      const id=ctx.getImageData(0,0,w,h); const d=id.data;
+      for(let i=0;i<d.length;i+=4)
+        for(let c=0;c<3;c++) if(d[i+c]>threshold) d[i+c]=255-d[i+c];
+      ctx.putImageData(id,0,0);
+    }
+  },
+  {
+    name:'Posterize', tag:'color',
+    params:[
+      {id:'bits',label:'bits',min:1,max:8,step:1,def:4,fmt:v=>`${v}-bit`}
+    ],
+    python:({bits})=>`transforms.Posterize(bits=${bits})`,
+    apply(ctx,src,{bits}){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.drawImage(src,0,0,w,h);
+      const id=ctx.getImageData(0,0,w,h); const d=id.data;
+      const shift=8-bits;
+      for(let i=0;i<d.length;i+=4)
+        for(let c=0;c<3;c++) d[i+c]=(d[i+c]>>shift)<<shift;
+      ctx.putImageData(id,0,0);
+    }
+  },
+  {
+    name:'Invert', tag:'color',
+    params:[
+      {id:'amount',label:'amount',min:0,max:1,step:.01,def:1.0,fmt:v=>`${(v*100).toFixed(0)}%`}
+    ],
+    python:()=>`transforms.RandomInvert(p=1.0)`,
+    apply(ctx,src,{amount}){
+      ctx.filter=`invert(${amount})`;
+      ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
+      ctx.filter='none';
+    }
+  },
+  // BLUR & SHARPEN
+  {
+    name:'GaussianBlur', tag:'blur',
+    params:[
+      {id:'sigma',label:'sigma',min:0,max:22,step:.2,def:2.5,fmt:v=>v.toFixed(1)}
+    ],
+    python:({sigma})=>`transforms.GaussianBlur(\n    kernel_size=5,\n    sigma=${sigma.toFixed(1)}\n)`,
+    apply(ctx,src,{sigma}){
+      ctx.filter=`blur(${sigma}px)`;
+      ctx.drawImage(src,0,0,ctx.canvas.width,ctx.canvas.height);
+      ctx.filter='none';
+    }
+  },
+  {
+    name:'RandomAdjustSharpness', tag:'blur',
+    params:[
+      {id:'factor',label:'sharpness factor',min:0,max:8,step:.1,def:2.0,fmt:v=>v.toFixed(1)}
+    ],
+    python:({factor})=>`transforms.RandomAdjustSharpness(\n    sharpness_factor=${factor.toFixed(1)},\n    p=1.0\n)`,
+    apply(ctx,src,{factor}){
+      const {width:w,height:h}=ctx.canvas;
+      if(factor<=1){
+        const blur=(1-factor)*10;
+        ctx.filter=`blur(${blur}px)`;
+        ctx.drawImage(src,0,0,w,h);
+        ctx.filter='none';
+        return;
+      }
+      // Unsharp mask
+      const off=document.createElement('canvas');
+      off.width=w; off.height=h;
+      const octx=off.getContext('2d');
+      octx.filter='blur(2px)'; octx.drawImage(src,0,0,w,h); octx.filter='none';
+      const blurred=octx.getImageData(0,0,w,h);
+      ctx.drawImage(src,0,0,w,h);
+      const orig=ctx.getImageData(0,0,w,h);
+      const id=ctx.createImageData(w,h); const d=id.data;
+      const bd=blurred.data, od=orig.data;
+      for(let i=0;i<d.length;i+=4){
+        for(let c=0;c<3;c++)
+          d[i+c]=Math.max(0,Math.min(255,od[i+c]+(factor-1)*(od[i+c]-bd[i+c])));
+        d[i+3]=255;
+      }
+      ctx.putImageData(id,0,0);
+    }
+  },
+  // NORMALIZE
+  {
+    name:'AutoContrast', tag:'normalize',
+    params:[],
+    python:()=>`transforms.autocontrast(img)  # functional`,
+    apply(ctx,src){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.drawImage(src,0,0,w,h);
+      const id=ctx.getImageData(0,0,w,h); const d=id.data;
+      for(let c=0;c<3;c++){
+        let mn=255,mx=0;
+        for(let i=c;i<d.length;i+=4){ if(d[i]<mn)mn=d[i]; if(d[i]>mx)mx=d[i]; }
+        const range=mx-mn||1;
+        for(let i=c;i<d.length;i+=4) d[i]=Math.round((d[i]-mn)/range*255);
+      }
+      ctx.putImageData(id,0,0);
+    }
+  },
+  {
+    name:'Equalize', tag:'normalize',
+    params:[],
+    python:()=>`transforms.RandomEqualize(p=1.0)`,
+    apply(ctx,src){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.drawImage(src,0,0,w,h);
+      const id=ctx.getImageData(0,0,w,h); const d=id.data;
+      for(let c=0;c<3;c++){
+        const hist=new Array(256).fill(0);
+        for(let i=c;i<d.length;i+=4) hist[d[i]]++;
+        const cdf=new Array(256).fill(0); cdf[0]=hist[0];
+        for(let i=1;i<256;i++) cdf[i]=cdf[i-1]+hist[i];
+        const cmin=cdf.find(v=>v>0)||0;
+        const n=w*h;
+        const lut=cdf.map(v=>Math.round((v-cmin)/Math.max(1,n-cmin)*255));
+        for(let i=c;i<d.length;i+=4) d[i]=lut[d[i]];
+      }
+      ctx.putImageData(id,0,0);
+    }
+  },
+  {
+    name:'Normalize', tag:'normalize',
+    params:[
+      {id:'mean',label:'mean (per channel)',min:0,max:1,step:.01,def:.5,fmt:v=>v.toFixed(2)},
+      {id:'std',label:'std (per channel)',min:.05,max:2,step:.05,def:.5,fmt:v=>v.toFixed(2)}
+    ],
+    python:({mean,std})=>`transforms.Normalize(\n    mean=[${mean.toFixed(3)}, ${mean.toFixed(3)}, ${mean.toFixed(3)}],\n    std=[${std.toFixed(3)}, ${std.toFixed(3)}, ${std.toFixed(3)}]\n)`,
+    apply(ctx,src,{mean,std}){
+      const {width:w,height:h}=ctx.canvas;
+      ctx.drawImage(src,0,0,w,h);
+      const id=ctx.getImageData(0,0,w,h); const d=id.data;
+      const m=mean*255, s=std*255;
+      for(let i=0;i<d.length;i+=4)
+        for(let c=0;c<3;c++)
+          d[i+c]=Math.max(0,Math.min(255,((d[i+c]-m)/s)*128+128));
+      ctx.putImageData(id,0,0);
+    }
+  }
+];
+
+// ============================================================
+// CARD BUILDER
+// ============================================================
+const registry = [];
+const CSIZE = 270;
+
+function buildCard(t, idx) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.dataset.tag = t.tag;
+  card.style.animationDelay = `${idx * 0.04}s`;
+
+  // Header
+  const top = document.createElement('div');
+  top.className = 'card-top';
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 't-name';
+  nameEl.textContent = t.name;
+
+  const tagEl = document.createElement('span');
+  tagEl.className = `t-tag tag-${t.tag}`;
+  tagEl.textContent = t.tag;
+
+  top.appendChild(nameEl);
+  top.appendChild(tagEl);
+  card.appendChild(top);
+
+  // Canvas area
+  const area = document.createElement('div');
+  area.className = 'canvas-area';
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 't-canvas';
+  canvas.width = CSIZE; canvas.height = CSIZE;
+  area.appendChild(canvas);
+
+  const badge = document.createElement('div');
+  badge.className = 'original-badge';
+  badge.textContent = 'ORIGINAL';
+  area.appendChild(badge);
+
+  const hint = document.createElement('div');
+  hint.className = 'compare-hint';
+  hint.textContent = 'SPACE = original';
+  area.appendChild(hint);
+
+  card.appendChild(area);
+
+  // Controls
+  const controls = document.createElement('div');
+  controls.className = 'card-controls';
+
+  const pvals = {};
+
+  if (t.params.length === 0) {
+    pvals.__none = true;
+    const nc = document.createElement('div');
+    nc.className = 'no-ctrl';
+    nc.textContent = '// no parameters';
+    controls.appendChild(nc);
+  } else {
+    t.params.forEach(p => {
+      if (p.type === 'select') {
+        pvals[p.id] = p.def;
+        const row = document.createElement('div');
+        row.className = 'ctrl-row';
+        const lbl = document.createElement('div');
+        lbl.className = 'ctrl-labels';
+        lbl.innerHTML = `<span class="ctrl-name">${p.label}</span>`;
+        const sel = document.createElement('select');
+        p.options.forEach(o => {
+          const opt = document.createElement('option');
+          opt.value = o.v; opt.textContent = o.l;
+          if (o.v === p.def) opt.selected = true;
+          sel.appendChild(opt);
+        });
+        sel.addEventListener('change', () => {
+          pvals[p.id] = sel.value;
+          renderT(canvas, t, pvals);
+          updateSnippet(snippetCode, t, pvals);
+        });
+        row.appendChild(lbl); row.appendChild(sel);
+        controls.appendChild(row);
+      } else {
+        pvals[p.id] = p.def;
+        const row = document.createElement('div');
+        row.className = 'ctrl-row';
+        const lbl = document.createElement('div');
+        lbl.className = 'ctrl-labels';
+        const nm = document.createElement('span'); nm.className = 'ctrl-name'; nm.textContent = p.label;
+        const vl = document.createElement('span'); vl.className = 'ctrl-val'; vl.textContent = p.fmt(p.def);
+        lbl.appendChild(nm); lbl.appendChild(vl);
+        const sl = document.createElement('input');
+        sl.type = 'range'; sl.min = p.min; sl.max = p.max; sl.step = p.step; sl.value = p.def;
+        sl.addEventListener('input', () => {
+          const v = parseFloat(sl.value);
+          pvals[p.id] = v;
+          vl.textContent = p.fmt(v);
+          renderT(canvas, t, pvals);
+          updateSnippet(snippetCode, t, pvals);
+        });
+        row.appendChild(lbl); row.appendChild(sl);
+        controls.appendChild(row);
+      }
+    });
+  }
+
+  card.appendChild(controls);
+
+  // Footer with snippet + copy
+  const footer = document.createElement('div');
+  footer.className = 'card-footer snippet-wrap';
+
+  const snippetCode = document.createElement('div');
+  snippetCode.className = 'snippet-code';
+
+  const snippetPopup = document.createElement('div');
+  snippetPopup.className = 'snippet-popup';
+  snippetPopup.appendChild(snippetCode);
+  footer.appendChild(snippetPopup);
+
+  const copyBtn = document.createElement('button');
+  copyBtn.className = 'copy-btn';
+  copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> copy python`;
+  copyBtn.addEventListener('click', () => {
+    const code = getRawSnippet(t, pvals);
+    navigator.clipboard.writeText(code).then(() => {
+      copyBtn.classList.add('copied');
+      copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> copied!`;
+      setTimeout(() => {
+        copyBtn.classList.remove('copied');
+        copyBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> copy python`;
+      }, 2000);
+    });
+  });
+
+  // Toggle snippet on name click
+  nameEl.addEventListener('click', () => {
+    snippetPopup.classList.toggle('open');
+    if (snippetPopup.classList.contains('open')) updateSnippet(snippetCode, t, pvals);
+  });
+
+  footer.appendChild(copyBtn);
+  card.appendChild(footer);
+
+  // Compare on hover (hold space)
+  area.addEventListener('mouseenter', () => { _hoverCard = { canvas, t, pvals }; });
+  area.addEventListener('mouseleave', () => {
+    _hoverCard = null;
+    badge.style.opacity = '0';
+    renderT(canvas, t, pvals);
+  });
+  area._badge = badge;
+
+  registry.push({ canvas, transform: t, params: pvals });
+  renderT(canvas, t, pvals);
+
+  return card;
+}
+
+function getRawSnippet(t, pvals) {
+  return `import torchvision.transforms as transforms\n\ntransform = ${t.python(pvals)}`;
+}
+
+function updateSnippet(el, t, pvals) {
+  const raw = getRawSnippet(t, pvals);
+  el.textContent = raw;
+}
+
+function renderT(canvas, t, pvals) {
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#05070b';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  try { t.apply(ctx, srcCanvas, pvals); }
+  catch(e) {
+    ctx.fillStyle = '#ff4d6a'; ctx.font = '11px monospace';
+    ctx.fillText('Error: ' + e.message, 8, 20);
+  }
+}
+
+// Space to compare
+let _hoverCard = null;
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && _hoverCard) {
+    e.preventDefault();
+    const { canvas, t, pvals } = _hoverCard;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#05070b'; ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.drawImage(srcCanvas,0,0,canvas.width,canvas.height);
+    // Find badge
+    const area = canvas.parentElement;
+    if (area._badge) area._badge.style.opacity = '1';
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'Space' && _hoverCard) {
+    const { canvas, t, pvals } = _hoverCard;
+    renderT(canvas, t, pvals);
+    const area = canvas.parentElement;
+    if (area._badge) area._badge.style.opacity = '0';
+  }
+});
+
+// ============================================================
+// BUILD
+// ============================================================
+function buildGrid() {
+  registry.length = 0;
+  const grid = document.getElementById('transformGrid');
+  grid.innerHTML = '';
+  TRANSFORMS.forEach((t, i) => grid.appendChild(buildCard(t, i)));
+  updateCount();
+}
+
+function updateCount() {
+  const visible = document.querySelectorAll('.card:not([style*="display: none"])').length;
+  document.getElementById('visibleCount').textContent = visible;
+}
+
+// Filter chips
+document.querySelectorAll('.chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    const tag = chip.dataset.tag;
+    document.querySelectorAll('.card').forEach(card => {
+      card.style.display = (tag === 'all' || card.dataset.tag === tag) ? '' : 'none';
+    });
+    updateCount();
+  });
+});
+
+buildGrid();
+</script>
+</body>
+</html>
