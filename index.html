@@ -309,10 +309,46 @@ select:focus{border-color:var(--accent)}
 .footer-note{font-family:var(--mono);font-size:10px;color:var(--text-muted);letter-spacing:.04em}
 .footer-note a{color:var(--accent);text-decoration:none}
 
+/* ─── SUBTITLE ─── */
+.subtitle-bar{
+  position:relative;z-index:10;
+  padding:20px 36px 22px;
+  border-bottom:1px solid var(--border);
+  background:linear-gradient(180deg,rgba(0,229,176,.02) 0%,transparent 100%);
+  display:flex;align-items:flex-start;gap:32px;flex-wrap:wrap;
+}
+.subtitle-main{
+  flex:1;min-width:260px;
+}
+.subtitle-headline{
+  font-family:var(--sans);font-size:15px;font-weight:600;
+  color:var(--bright);margin-bottom:6px;letter-spacing:-.01em;
+}
+.subtitle-body{
+  font-size:13px;font-weight:300;color:var(--bright);line-height:1.7;
+  max-width:620px;
+}
+.subtitle-body strong{color:var(--bright);font-weight:600;}
+.subtitle-body code{
+  font-family:var(--mono);font-size:11px;
+  background:var(--surface);border:1px solid var(--border);
+  padding:1px 5px;border-radius:3px;color:var(--accent);
+}
+.subtitle-pills{
+  display:flex;flex-direction:column;gap:6px;padding-top:2px;
+}
+.pill-row{display:flex;align-items:center;gap:8px;}
+.pill-icon{
+  font-size:13px;flex-shrink:0;width:18px;text-align:center;
+}
+.pill-text{font-size:12px;color:var(--bright);font-weight:300;white-space:nowrap;}
+.pill-text strong{color:var(--bright);font-weight:600;}
+
 /* ─── RESPONSIVE ─── */
 @media(max-width:680px){
-  .header,.source-bar,.filter-bar,.grid-wrapper,.page-footer{padding-left:16px;padding-right:16px}
+  .header,.subtitle-bar,.source-bar,.filter-bar,.grid-wrapper,.page-footer{padding-left:16px;padding-right:16px}
   .logo-title{font-size:16px}
+  .subtitle-pills{display:none}
 }
 </style>
 </head>
@@ -339,6 +375,25 @@ select:focus{border-color:var(--accent)}
   </div>
 </header>
 
+<!-- SUBTITLE -->
+<div class="subtitle-bar">
+  <div class="subtitle-main">
+    <div class="subtitle-headline">Visually explore augmentation transforms before writing a single line of training code.</div>
+    <p class="subtitle-body">
+      Each card shows a live preview of a <code>torchvision.transforms</code> applied to your source image.
+      Adjust the sliders to see how parameter choices affect the output — then hit <strong>copy python</strong>
+      to grab the exact snippet. Drop your own image into the <code>image/</code> folder to use your real data,
+      or upload one directly. <strong>Hold SPACE</strong> over any card to compare against the original.
+    </p>
+  </div>
+  <div class="subtitle-pills">
+    <div class="pill-row"><span class="pill-icon">🎛️</span><span class="pill-text"><strong>17 transforms</strong> with live parameter sliders</span></div>
+    <div class="pill-row"><span class="pill-icon">📋</span><span class="pill-text"><strong>Copy Python</strong> snippet with your exact values</span></div>
+    <div class="pill-row"><span class="pill-icon">🖼️</span><span class="pill-text"><strong>Upload</strong> your own image or use <code>image/</code> folder</span></div>
+    <div class="pill-row"><span class="pill-icon">⎵</span><span class="pill-text"><strong>Hold SPACE</strong> on any card to compare original</span></div>
+  </div>
+</div>
+
 <!-- SOURCE BAR -->
 <div class="source-bar">
   <div class="source-thumb">
@@ -346,8 +401,8 @@ select:focus{border-color:var(--accent)}
   </div>
   <div class="source-meta">
     <span class="source-label">Source Image</span>
-    <span class="source-dims" id="srcDims">400 × 400</span>
-    <span class="source-note">Applied as input to all transforms below</span>
+    <span class="source-dims" id="srcDims">— × —</span>
+    <span class="source-note" id="srcFilename">loading…</span>
   </div>
 </div>
 
@@ -473,27 +528,62 @@ function drawScene(canvas) {
   });
 }
 
-drawScene(srcCanvas);
-
-// Show preview
 const prevCtx = document.getElementById('srcPreview').getContext('2d');
-prevCtx.drawImage(srcCanvas,0,0,68,68);
+
+// ── Load source image from image/ folder, fall back to drawn scene ──
+function applyImageToCanvas(img, label) {
+  const ctx = srcCanvas.getContext('2d');
+  const sc = Math.min(SRC_SIZE / img.width, SRC_SIZE / img.height);
+  const w = img.width * sc, h = img.height * sc;
+  ctx.fillStyle = '#05070b'; ctx.fillRect(0, 0, SRC_SIZE, SRC_SIZE);
+  ctx.drawImage(img, (SRC_SIZE - w) / 2, (SRC_SIZE - h) / 2, w, h);
+  prevCtx.clearRect(0, 0, 68, 68);
+  prevCtx.drawImage(srcCanvas, 0, 0, 68, 68);
+  document.getElementById('srcDims').textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
+  document.getElementById('srcFilename').textContent = label;
+  if (registry.length) registry.forEach(r => renderT(r.canvas, r.transform, r.params));
+}
+
+function useDefaultScene() {
+  drawScene(srcCanvas);
+  prevCtx.drawImage(srcCanvas, 0, 0, 68, 68);
+  document.getElementById('srcDims').textContent = `${SRC_SIZE} × ${SRC_SIZE}`;
+  document.getElementById('srcFilename').textContent = 'default scene (generated)';
+  if (registry.length) registry.forEach(r => renderT(r.canvas, r.transform, r.params));
+}
+
+// Try candidates in order; resolve on first success, fall back to scene
+const IMAGE_CANDIDATES = [
+  'image/image.jpg',
+  'image/image.jpeg',
+  'image/image.png',
+  'image/image.webp',
+  'image/image.gif',
+  'image/image.bmp',
+];
+
+function tryLoadImage(candidates, onSuccess, onFail) {
+  if (!candidates.length) { onFail(); return; }
+  const [src, ...rest] = candidates;
+  const img = new Image();
+  img.onload = () => onSuccess(img, src);
+  img.onerror = () => tryLoadImage(rest, onSuccess, onFail);
+  img.src = src;
+}
+
+// Kick off at startup
+tryLoadImage(
+  IMAGE_CANDIDATES,
+  (img, src) => applyImageToCanvas(img, src),
+  () => useDefaultScene()
+);
 
 // Upload handler
-document.getElementById('imgUpload').addEventListener('change',function(e){
-  const f=e.target.files[0]; if(!f) return;
-  const img=new Image();
-  img.onload=function(){
-    const ctx=srcCanvas.getContext('2d');
-    const sc=Math.min(SRC_SIZE/img.width,SRC_SIZE/img.height);
-    const w=img.width*sc, h=img.height*sc;
-    ctx.fillStyle='#05070b'; ctx.fillRect(0,0,SRC_SIZE,SRC_SIZE);
-    ctx.drawImage(img,(SRC_SIZE-w)/2,(SRC_SIZE-h)/2,w,h);
-    prevCtx.clearRect(0,0,68,68); prevCtx.drawImage(srcCanvas,0,0,68,68);
-    document.getElementById('srcDims').textContent=`${img.naturalWidth} × ${img.naturalHeight}`;
-    registry.forEach(r=>renderT(r.canvas,r.transform,r.params));
-  };
-  img.src=URL.createObjectURL(f);
+document.getElementById('imgUpload').addEventListener('change', function(e) {
+  const f = e.target.files[0]; if (!f) return;
+  const img = new Image();
+  img.onload = function() { applyImageToCanvas(img, f.name); };
+  img.src = URL.createObjectURL(f);
 });
 
 // ============================================================
