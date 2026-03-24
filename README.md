@@ -4,8 +4,6 @@
 
 An interactive visual reference for `torchvision.transforms` — see exactly what each transform does and how parameter changes affect your images, before writing a single line of training code.
 
-![screenshot placeholder](https://via.placeholder.com/900x400/0e1117/00e5b0?text=torchvision+Transform+Explorer)
-
 ---
 
 ## Features
